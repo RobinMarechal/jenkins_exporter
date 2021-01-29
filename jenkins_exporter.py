@@ -8,8 +8,10 @@ from pprint import pprint
 
 import os
 from sys import exit
-from prometheus_client import start_http_server, Summary
+from prometheus_client import Summary, make_wsgi_app
 from prometheus_client.core import GaugeMetricFamily, REGISTRY
+from wsgiref.simple_server import make_server
+
 
 DEBUG = int(os.environ.get('DEBUG', '0'))
 
@@ -178,6 +180,13 @@ def parse_args():
         default=os.environ.get('JENKINS_PASSWORD')
     )
     parser.add_argument(
+        '-a', '--address',
+        metavar='address',
+        required=False,
+        help='Listen to this address or ip',
+        default=os.environ.get('VIRTUAL_ADDRESS', '0.0.0.0')
+    )
+    parser.add_argument(
         '-p', '--port',
         metavar='port',
         required=False,
@@ -199,12 +208,16 @@ def parse_args():
 def main():
     try:
         args = parse_args()
+
+        collector = JenkinsCollector(args.jenkins, args.user, args.password, args.insecure)
+        REGISTRY.register(collector)
+        
         port = int(args.port)
-        REGISTRY.register(JenkinsCollector(args.jenkins, args.user, args.password, args.insecure))
-        start_http_server(port)
-        print("Polling {}. Serving at port: {}".format(args.jenkins, port))
-        while True:
-            time.sleep(1)
+        address = args.address
+
+        app = make_wsgi_app()
+        httpd = make_server(address, port, app)
+        httpd.serve_forever()
     except KeyboardInterrupt:
         print(" Interrupted")
         exit(0)
