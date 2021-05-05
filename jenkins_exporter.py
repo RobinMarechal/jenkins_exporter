@@ -63,9 +63,12 @@ class JenkinsCollector(object):
 
         def parsejobs(myurl):
             # params = tree: jobs[name,lastBuild[number,timestamp,duration,actions[queuingDurationMillis...
+            print("GET " + myurl)
             if self._user and self._password:
+                print("AUTH: {0}:{1}".format(self._user, self._password) )
                 response = requests.get(myurl, params=params, auth=(self._user, self._password), verify=(not self._insecure))
             else:
+                print("NO AUTH")
                 response = requests.get(myurl, params=params, verify=(not self._insecure))
             if DEBUG:
                 pprint(response.text)
@@ -80,7 +83,7 @@ class JenkinsCollector(object):
                 if job['_class'] == 'com.cloudbees.hudson.plugins.folder.Folder' or \
                    job['_class'] == 'jenkins.branch.OrganizationFolder' or \
                    job['_class'] == 'org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject':
-                    jobs += parsejobs(job['url'] + '/api/json')
+                    jobs += parsejobs(job['url'] + 'api/json')
                 else:
                     jobs.append(job)
             return jobs
@@ -219,7 +222,7 @@ def main():
         httpd = make_server(address, port, app)
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print(" Interrupted")
+        print("Interrupted")
         exit(0)
 
 
